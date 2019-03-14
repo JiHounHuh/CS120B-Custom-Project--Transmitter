@@ -159,8 +159,9 @@ int SMTick1(int state)
 }
 
 // Enumeration of states.
-enum SM2_States { SM2_Start, SM2_Display };
-
+enum SM2_States { SM2_Start, SM2_Display, SM2_Wait, SM2_Press, SM2_A, SM2_B };
+unsigned char tmpA = 0x00;
+unsigned char tmpB = 0x00;
 int SMTick2(int state)
 {
     switch (state)
@@ -173,6 +174,8 @@ int SMTick2(int state)
         //state = SM2_Display;
         break;
         
+		case SM2_Wait:
+		
         default:
         state = SM2_Display;
         break;
@@ -198,19 +201,47 @@ int SMTick2(int state)
 					break;
 				}
 				else {
-					column = 1;
-					LCD_Cursor(column);
-					if (keypadChar)
-					{
-						LCD_WriteData(keypadChar);
-					}
-					newInput = 0;
-					asm("nop");
-					break;
+					state = SM2_Wait;
+// 					column = 1;
+// 					LCD_Cursor(column);
+// 					if (keypadChar)
+// 					{
+// 						LCD_WriteData(keypadChar);
+// 					}
+// 					newInput = 0;
+// 					asm("nop");
+// 					break;
 				}
 			}
 			break;
 			
+			case SM2_Wait:
+				tmpA = ((~PINA) & 0x04);
+				tmpB = ((~PINA) & 0x08);
+				if(!tmpA && !tmpB) {
+					state = SM2_Wait;
+					//break;
+				}
+				else {
+					state = SM2_Press;
+					//break;
+				}
+				break;
+				
+			case SM2_Press:
+				tmpA = ((~PINA) & 0x04);
+				tmpB = ((~PINA) & 0x08);
+				if(tmpA && !tmpB) {
+					state = SM2_A;
+				
+				}else if(tmpB && !tmpA) {
+					state = SM2_B;
+				}else if(!tmpA && !tmpB) {
+					
+				}
+			
+			case SM2_A:
+				
 			default:
 				break;
     }
