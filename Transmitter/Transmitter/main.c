@@ -9,9 +9,11 @@
 #include <avr/io.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "io.c"
 #include "bit.h"
 #include "timer.h"
+
 
 //--------Find GCD function --------------------------------------------------
 unsigned long int findGCD(unsigned long int a, unsigned long int b)
@@ -26,6 +28,42 @@ unsigned long int findGCD(unsigned long int a, unsigned long int b)
     return 0;
 }
 //--------End find GCD function ----------------------------------------------
+
+//--------Simple RSA function ------------------------------------------------
+int ersa(int msg){
+	//rsa requires a p, q, n, e, d, phi;
+	double p = 3;
+	double q = 7;
+	double n = p*q;
+	double phi = (p-1)*(q-1);
+
+	//public key
+	// e stands for encrypt
+	double e = 2;
+
+	// checks if e is greater than 0 with phi
+	while(e < phi){
+		if(findGCD(e,phi) == 1) break;
+		else e++;
+	}
+	
+	// generating private key
+	//decrypt key d
+	unsigned long int d;
+
+	//k
+	double k = 2;
+	//double msg = 12; // length
+
+	//ensure that the decryption key satifies the check
+	d = (1+(k*phi))/e;
+	double c = pow(msg,e);// encrypt the message with the encryption key
+	c = fmod(c,n);
+	//printf("%lf",c);
+	return c;
+}
+//--------End RSA function ------------------------------------------------
+
 
 //--------Task scheduler data structure---------------------------------------
 // Struct for Tasks represent a running process in our simple real-time operating system.
@@ -42,6 +80,10 @@ typedef struct _task {
 char keypadChar = 0;
 char column = 9;
 char newInput = 0;
+char message = 0;
+char encrypted[];
+char count = 0;
+char buffer[] = "        ";
 //--------End Shared Variables------------------------------------------------
 
 
@@ -130,10 +172,10 @@ int SMTick1(int state) {
 			case '9': keypadChar = '9'; newInput = 1;break;
 			case 'A': keypadChar = 'A'; newInput = 1;break;
 			case 'B': keypadChar = 'B'; newInput = 1;break;
-			case 'C': keypadChar = 'C'; newInput = 1;break;
+			case 'C': keypadChar = 'C'; newInput = 1;break; 
 			case 'D': keypadChar = 'D'; newInput = 1;break;
-			case '*': keypadChar = '*'; newInput = 1;break;
-			case '#': keypadChar = '#'; newInput = 1;break;
+			case '*': keypadChar = '*'; newInput = 0;break;
+			case '#': keypadChar = '#'; newInput = 0;break;
 			default: keypadChar = 0x20; break; // Should never occur.
 		}
 		break;
@@ -171,18 +213,23 @@ int SMTick1(int state) {
 						LCD_Cursor(column);
 						if(keypadChar) {
 							LCD_WriteData(keypadChar);
+							message += keypadChar;
+							column++;
 						}
-						column++;
 						newInput = 0;
 						asm("nop");
 						break;
 					}
 					else {
 						column = 9;
+						count = 0;
 						LCD_Cursor(column);
 						if(keypadChar) {
 							LCD_WriteData(keypadChar);
+							message = keypadChar;
+							column++;
 						}
+						
 						newInput = 0;
 						asm("nop");
 						break;
@@ -195,9 +242,93 @@ int SMTick1(int state) {
 		}
 	return state;
 }
+char msg_len = 0;
+char check = 0;
+enum SM3_States { SM3_Start, SM3_Encrypt, SM3_Release, SM3_Display };
+unsigned char tmpB = 0x00;
+int SMTick3(int state) {
+	switch (state) {
+		case SM3_Start:
+			state = SM3_Encrypt;
+		break;
+		
+		case SM3_Encrypt:
+			tmpB = ~PINA & 0x04;
+			if(tmpB) {
+				state = SM3_Release;
+				break;
+			}
+			else {
+				state = SM3_Encrypt;
+				break;
+			}
+			break;
+			
+		case SM3_Release:
+			tmpB = ~PINA & 0x04;
+			if(tmpB) {
+				 state = SM3_Release;
+				 break;
+			}
+			else {
+				msg_len = strlen(message);
+				if(msg_len == 0) {
+					check = 0;
+					break;
+				}
+				else {
+					state = SM3_Display;
+					check = 1;
+					break;
+				}
+			}
+			break;
+		
+		case SM3_Display:
+			break;
+		break;
+		
+		default:
+		state = SM3_Encrypt;
+		break;
+	}
+	
+	switch (state) {
+		case SM3_Start:
+			break;
+		
+		case SM3_Encrypt:
+			
+			encrypted[50] = ersa(message);
+			break;
+		
+		case SM3_Display:
+			if(check != 0) {
+				char encrypt[] = "Encrypted Value: ";
+				strcat(encrypt, encrypted);
+				LCD_DisplayString(1, encrypt);
+			}
+			break;
+		
+		default: 
+			break;
+	}
+	return state;
+}
 
 
-
+// enum SM4_States { SM4_Start, SM4_Begin, SM4_Message, SM4_End};
+// int SMTick4(int state) {
+// 	switch (state) {
+// 		case SM4_Start:
+// 			state = SM4_Begin;
+// 			break;
+// 		
+// 		case SM4_Begin:
+// 		break;
+// 			
+// 	}
+// 	};
 
 int main(void)
 {
@@ -205,25 +336,30 @@ int main(void)
 DDRA = 0xFF; PORTA = 0x00; // LCD control lines
 DDRC = 0xF0; PORTC = 0x0F; // Keypad
 DDRD = 0xFF; PORTD = 0x00; // LCD data lines
-
+DDRB = 0xFF; PORTB = 0x00; // Xbee Data lines
 // Period for the tasks
 unsigned long int SMTick1_calc = 50;
 unsigned long int SMTick2_calc = 500;
+unsigned long int SMTick3_calc = 500;
+/*unsigned long int SMTick4_calc = 10;*/
 
 // Calculating GCD
 unsigned long int tmpGCD = 1;
 tmpGCD = findGCD (SMTick1_calc, SMTick2_calc);
-
+tmpGCD = findGCD(tmpGCD, SMTick3_calc);
+/*tmpGCD = findGCD(tmpGCD, SMTick4_calc);*/
 // Greatest common divisor for all tasks or smallest time unit for tasks
 unsigned long int GCD = tmpGCD;
 
 //Recalculate GCD periods for scheduler
 unsigned long int SMTick1_period = SMTick1_calc / GCD;
 unsigned long int SMTick2_period = SMTick2_calc / GCD;
+unsigned long int SMTick3_period = SMTick3_calc / GCD;
+/*unsigned long int SMTick4_period = SMTick4_calc / GCD;*/
 
 // Declare an array of tasks
-static task task1, task2;
-task *tasks[] = { &task1, &task2 };
+static task task1, task2, task3;//, task4;
+task *tasks[] = { &task1, &task2, &task3};//, &task4 };
 const unsigned short numTasks = sizeof(tasks) / sizeof(task*);
 
 // Task 1
@@ -239,10 +375,33 @@ task2.period = SMTick2_period; // Task Period.
 task2.elapsedTime = SMTick2_period; // Task current elapsed time.
 task2.TickFct = &SMTick2; // Function pointer for the tick.
 
+// Task 3
+task3.state = -1;//Task initial state.
+task3.period = SMTick3_period;//Task Period.
+task3.elapsedTime = SMTick3_period; // Task current elasped time.
+task3.TickFct = &SMTick3; // Function pointer for the tick.
+
+// Task 4
+// task4.state = -1;//Task initial state.
+// task4.period = SMTick3_period;//Task Period.
+// task4.elapsedTime = SMTick4_period; // Task current elasped time.
+// task4.TickFct = &SMTick4; // Function pointer for the tick.
+
 // Set the timer and turn it on
 TimerSet(GCD);
 TimerOn();
-LCD_DisplayString(1,"Message:");
+char MSG[] = "Message:";
+//const char length_msg = strlen(MSG);
+char test[] = "testing";
+//strcat(MSG, buffer);
+strcat(MSG, test);
+LCD_DisplayString(1, MSG);
+
+//const char MSG[] = "Woomy!";
+
+//LCD_WriteData(test);
+//LCD_DisplayString(17, MSG);
+//LCD_DisplayString(17,"testing:");
 unsigned short i; // Scheduler for-loop iterator
 while(1)
 {
