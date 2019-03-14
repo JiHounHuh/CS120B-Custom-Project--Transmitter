@@ -80,7 +80,7 @@ typedef struct _task {
 char keypadChar = 0;
 char column = 9;
 char newInput = 0;
-char message = 0;
+char message[] = "";
 char encrypted[];
 char count = 0;
 char buffer[] = "        ";
@@ -186,8 +186,9 @@ int SMTick1(int state) {
 	return state;
 }
 	
-	enum SM2_States { SM2_Start, SM2_Display };
-		
+	enum SM2_States { SM2_Start, SM2_Display, SM2_Wait};
+	unsigned char tmpA = 0x00;
+	unsigned char tmpB = 0x00;
 	int SMTick2 (int state) {
 		switch (state) {
 			case SM2_Start:
@@ -207,45 +208,75 @@ int SMTick1(int state) {
 				break;
 			
 			case SM2_Display:
+				
 				if(newInput != 0) {
 					if(column < 17) {
 						asm("nop");
 						LCD_Cursor(column);
 						if(keypadChar) {
 							LCD_WriteData(keypadChar);
-							message += keypadChar;
+							//message[count] = keypadChar;
 							column++;
+							count++;
 						}
 						newInput = 0;
 						asm("nop");
 						break;
 					}
 					else {
-						column = 9;
-						count = 0;
-						LCD_Cursor(column);
-						if(keypadChar) {
+// 						state = SM2_Wait;
+// 						break;
+						//LCD_Cursor(17);
+						char message[] = "s = A, r = B";
+						LCD_DisplayString(1,message);
+						if(tmpB) {
+							column = 9;
+							count = 0;
 							LCD_WriteData(keypadChar);
-							message = keypadChar;
+							message[count] = keypadChar;
 							column++;
+							count++;
 						}
 						
+						//else if(tmpA) break;
 						newInput = 0;
 						asm("nop");
 						break;
 					}
-				}
-				break;
+					break;
+				
+				
+				case SM2_Wait:
+					tmpA = ((~PINA) & 0x04);
+					tmpB = ((~PINA) & 0x08);
+					
+					//LCD_Cursor(17);
+					char message[] = "s = A, r = B";
+					LCD_DisplayString(17,message);
+					if(tmpA && !tmpB) break;
+					
+					else if(tmpB) {
+						state = SM2_Wait;
+						break;
+					}
+					
+					else if(!tmpB && !tmpA) {
+						column = 9;
+						count = 0;
+						state = SM2_Display;
+						break;
+					}
 				
 				default:
 					break;
 		}
-	return state;
-}
+	
+		}
+		return state;
+	}
 char msg_len = 0;
 char check = 0;
 enum SM3_States { SM3_Start, SM3_Encrypt, SM3_Release, SM3_Display };
-unsigned char tmpB = 0x00;
 int SMTick3(int state) {
 	switch (state) {
 		case SM3_Start:
@@ -253,7 +284,7 @@ int SMTick3(int state) {
 		break;
 		
 		case SM3_Encrypt:
-			tmpB = ~PINA & 0x04;
+			tmpB = ((~PINA) & 0x04);
 			if(tmpB) {
 				state = SM3_Release;
 				break;
@@ -317,18 +348,18 @@ int SMTick3(int state) {
 }
 
 
-// enum SM4_States { SM4_Start, SM4_Begin, SM4_Message, SM4_End};
-// int SMTick4(int state) {
-// 	switch (state) {
-// 		case SM4_Start:
-// 			state = SM4_Begin;
-// 			break;
-// 		
-// 		case SM4_Begin:
-// 		break;
-// 			
-// 	}
-// 	};
+enum SM4_States { SM4_Start, SM4_Begin, SM4_Message, SM4_End};
+int SMTick4(int state) {
+	switch (state) {
+		case SM4_Start:
+			state = SM4_Begin;
+			break;
+		
+		case SM4_Begin:
+		break;
+			
+	}
+	};
 
 int main(void)
 {
@@ -340,7 +371,7 @@ DDRB = 0xFF; PORTB = 0x00; // Xbee Data lines
 // Period for the tasks
 unsigned long int SMTick1_calc = 50;
 unsigned long int SMTick2_calc = 500;
-unsigned long int SMTick3_calc = 500;
+unsigned long int SMTick3_calc = 300;
 /*unsigned long int SMTick4_calc = 10;*/
 
 // Calculating GCD
@@ -394,7 +425,7 @@ char MSG[] = "Message:";
 //const char length_msg = strlen(MSG);
 char test[] = "testing";
 //strcat(MSG, buffer);
-strcat(MSG, test);
+//strcat(MSG, test);
 LCD_DisplayString(1, MSG);
 
 //const char MSG[] = "Woomy!";
