@@ -91,7 +91,7 @@ char buffer[] = "        ";
 
 unsigned char GetKeypadKey() {
 
-	PORTC = 0xEF; // Enable col 4 with 0, disable others with 1’s
+	PORTC = 0xEF; // Enable col 4 with 0, disable others with 1?s
 	asm("nop"); // add a delay to allow PORTC to stabilize before checking
 	if (GetBit(PINC,0)==0) { return('1'); }
 	if (GetBit(PINC,1)==0) { return('4'); }
@@ -99,7 +99,7 @@ unsigned char GetKeypadKey() {
 	if (GetBit(PINC,3)==0) { return('*'); }
 
 	// Check keys in col 2
-	PORTC = 0xDF; // Enable col 5 with 0, disable others with 1’s
+	PORTC = 0xDF; // Enable col 5 with 0, disable others with 1?s
 	asm("nop"); // add a delay to allow PORTC to stabilize before checking
 	if (GetBit(PINC,0)==0) { return('2'); }
 	if (GetBit(PINC,1)==0) { return('5'); }
@@ -107,7 +107,7 @@ unsigned char GetKeypadKey() {
 	if (GetBit(PINC,3)==0) { return('0'); }
 
 	// Check keys in col 3
-	PORTC = 0xBF; // Enable col 6 with 0, disable others with 1’s
+	PORTC = 0xBF; // Enable col 6 with 0, disable others with 1?s
 	asm("nop"); // add a delay to allow PORTC to stabilize before checking
 	if (GetBit(PINC,0)==0) { return('3'); }
 	if (GetBit(PINC,1)==0) { return('6'); }
@@ -115,7 +115,7 @@ unsigned char GetKeypadKey() {
 	if (GetBit(PINC,3)==0) { return('#'); }
 
 	// Check keys in col 4
-	PORTC = 0x7F; // Enable col 7 with 0, disable others with 1’s
+	PORTC = 0x7F; // Enable col 7 with 0, disable others with 1?s
 	asm("nop"); // add a delay to allow PORTC to stabilize before checking
 	if (GetBit(PINC,0)==0) { return('A'); }
 	if (GetBit(PINC,1)==0) { return('B'); }
@@ -281,7 +281,7 @@ int SMTick1(int state) {
 					sprintf(checker, "%d", ersa(111));
 					//checker[10] = ersa(111) + '0';
 					strcat(encrypted,checker[10]);
-						
+
 					LCD_DisplayString(1, encrypted);
 					char ask[] = " send?";
 					strcat(encrypted,ask);
@@ -443,4 +443,3 @@ while(1)
 // Error: Program should not exit!
 return 0;
 }
-
