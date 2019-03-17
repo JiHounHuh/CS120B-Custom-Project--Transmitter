@@ -60,7 +60,9 @@ int ersa(int msg){
 	double c = pow(msg,e);// encrypt the message with the encryption key
 	c = fmod(c,n);
 	//printf("%lf",c);
-	return c;
+	int down;
+	down = floor(c);
+	return down;
 }
 //--------End RSA function ------------------------------------------------
 
@@ -80,7 +82,7 @@ typedef struct _task {
 char keypadChar = 0;
 char column = 8;
 char newInput = 0;
-char message[] = "";
+char msg[] = "";
 char encrypted[] = "Encrypted Value: ";
 char count = 0;
 char buffer[] = "        ";
@@ -194,7 +196,7 @@ int SMTick1(int state) {
 			case SM2_Start:
 				state = SM2_Display;
 				break;
-				
+			
 			case SM2_Display:
 				//state = SM2_Wait;
 			break;
@@ -220,9 +222,9 @@ int SMTick1(int state) {
 				if(newInput != 0) {
 					column++;
 					if(column < 12) {
-						asm("nop");
+						//asm("nop");
 						LCD_Cursor(column);
-						if(keypadChar) {
+						if(newInput == 1) {
 							LCD_WriteData(keypadChar);
 							//message[count] = keypadChar;
 							
@@ -237,9 +239,9 @@ int SMTick1(int state) {
 						break;
 					}
 						newInput = 0;
-						asm("nop");
-					}
-					break;
+						//asm("nop");
+				}
+				break;
 				
 				
 				case SM2_Wait:
@@ -256,6 +258,8 @@ int SMTick1(int state) {
 						break;	
 					}
 					else if(tmpB && !tmpA) {
+						keypadChar = '\0';
+						newInput = 0;
 						column = 8;
 						count = 0;
 						LCD_DisplayString(1, "Message:");
@@ -273,41 +277,51 @@ int SMTick1(int state) {
 					tmpA = ((~PINA) & 0x04);
 					tmpB = ((~PINA) & 0x08);
 					//count = 10000;
-					
-						strcat(encrypted,ersa(message));
+					char checker[10];
+					sprintf(checker, "%d", ersa(111));
+					//checker[10] = ersa(111) + '0';
+					strcat(encrypted,checker[10]);
 						
-						LCD_DisplayString(1, encrypted);
-// 					while(count != 0) {
-// 						count--;
-// 						//state = SM2_Encrypt;
-// 						//break;
-// 						//LCD_DisplayString(1, "Message Sent");
-// 						asm("nop");
-// 					}
+					LCD_DisplayString(1, encrypted);
 					char ask[] = " send?";
 					strcat(encrypted,ask);
 					LCD_DisplayString(1, encrypted);
+// 					if(tmpA) {
+// 						state = SM2_Choice;
+// 						break;
+// 					}
+// 					else if(!tmpA && tmpB) {
+// 						state = SM2_Display;
+// 						break;
+// 					}
+// 					else if(!tmpA && !tmpB) {
+// 						state = SM2_Encrypt;
+// 					}
 					state = SM2_Choice;
 					break;
 				
 				case SM2_Choice:
 					tmpA = ((~PINA) & 0x04);
 					tmpB = ((~PINA) & 0x08);
-					if(tmpA && !tmpB) {
+					if(!tmpA && !tmpB) {
+						state = SM2_Choice;
+						break;
+					}
+					else if(tmpA && !tmpB) {
 						LCD_DisplayString(1, "Sent");
 						state = SM2_Display;
 						break;
 					}
 					else if(!tmpA && tmpB) {
 						LCD_DisplayString(1, "Denied");
-						message[0] = '\0';
+						msg[0] = '\0';
 						state = SM2_Display;
 						break;
 					}
-					else if(!tmpA && !tmpB) {
-						state = SM2_Choice;
-						break;
-					}
+// 					else if(!tmpA && !tmpB) {
+// 						state = SM2_Choice;
+// 						break;
+// 					}
 					break;
 					
 				default:
@@ -315,7 +329,7 @@ int SMTick1(int state) {
 		}
 	
 		return state;
-	}
+};
 char msg_len = 0;
 char check = 0;
 
@@ -327,12 +341,12 @@ int SMTick3(int state) {
 			break;
 		
 		case SM3_Begin:
-		LCD_DisplayString(1,message);
-		PORTB = 0xFF;
+		LCD_DisplayString(1,msg);
+		//PORTB = 0xFF;
 		break;
 			
 	}
-	};
+};
 
 int main(void)
 {
