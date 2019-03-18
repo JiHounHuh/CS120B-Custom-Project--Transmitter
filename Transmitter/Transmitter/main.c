@@ -81,7 +81,7 @@ char keypadChar = 0;
 char column = 8;
 char newInput = 0;
 char message[] = "";
-char encrypted[] = "Encrypted Value: ";
+char encrypted[] = "Encrypted Message: Send? ";
 char count = 0;
 char buffer[] = "        ";
 //--------End Shared Variables------------------------------------------------
@@ -186,10 +186,11 @@ int SMTick1(int state) {
 	return state;
 }
 	
-	enum SM2_States { SM2_Start, SM2_Display, SM2_Wait, SM2_Encrypt, SM2_Choice, SM2_Accept, SM2_Deny, SM2_Done} SM2_state;
+	enum SM2_States { SM2_Start, SM2_Display, SM2_Wait, SM2_Encrypt, SM2_Choice, SM2_Accept, SM2_Deny, SM2_Done, SM2_One,SM2_Two,SM2_Three,SM2_Four,SM2_Five} SM2_state;
 	unsigned char tmpA = 0x00;
 	unsigned char tmpB = 0x00;
 	char counter = 0;
+	char cCount = 2;
 int SMTick2 (int SM2_state) {
 	
 //==================== Begin of Transitions =================
@@ -200,18 +201,20 @@ int SMTick2 (int SM2_state) {
 				
 			case SM2_Display:
 				//state = SM2_Wait;
+				if(column >= 11) SM2_state = SM2_Wait;break;
 			break;
 			
 			case SM2_Wait:
-			if(column >= 11) SM2_state = SM2_Wait;break;
+			
 			/*	state = SM2_Wait;*/
 			break;
 			
 			case SM2_Encrypt:
-				SM2_state = SM2_Choice;
+				//SM2_state = SM2_Choice;
 				break;
 			
 			case SM2_Choice:
+				//SM2_state = SM2_Accept;
 				break;
 				
 			case SM2_Accept:
@@ -220,6 +223,25 @@ int SMTick2 (int SM2_state) {
 			
 			case SM2_Deny:
 				break;
+				
+			case SM2_One:
+				//SM2_state = SM2_Two;
+				break;
+			
+			case SM2_Two:
+			SM2_state = SM2_Three;
+			break;
+			
+			case SM2_Three:
+			SM2_state = SM2_Four;
+			break;
+			
+			case SM2_Four:
+			SM2_state = SM2_Five;
+			break;
+			
+			case SM2_Five:
+			break;
 				
 			case SM2_Done:
 				break;
@@ -242,7 +264,7 @@ int SMTick2 (int SM2_state) {
 						LCD_Cursor(column);
 						if(newInput == 1) {
 							LCD_WriteData(keypadChar);
-							//message[count] = keypadChar;
+							message[count] = keypadChar;
 							count++;
 						}
 						newInput = 0;
@@ -268,6 +290,9 @@ int SMTick2 (int SM2_state) {
 					LCD_DisplayString(17,chatter);
 
 					if(tmpA && !tmpB) {
+						//char ask[] = " send?";
+						//strcat(encrypted,ask);
+						LCD_DisplayString(1, encrypted);
 						SM2_state = SM2_Encrypt;
 						break;
 					}
@@ -290,17 +315,31 @@ int SMTick2 (int SM2_state) {
 					tmpA = ((~PINA) & 0x04);
 					tmpB = ((~PINA) & 0x08);
 					
-					strcat(encrypted,ersa(message));
-						
+					
+// 					for(int i = count-1; i >= 0; i--) {
+// 						strcat(encrypted,ersa(message));
+// 					}
+					message[10] = ersa(message);
+					//strcat(encrypted,ersa("ABC"));
+					//strcat(encrypted,message[2]);
 					LCD_DisplayString(1, encrypted);
-					char ask[] = " send?YorN";
-					strcat(encrypted,ask);
-					LCD_DisplayString(1, encrypted);
+// 					char ask[] = " send?YorN";
+// 					strcat(encrypted,ask);
+// 					LCD_DisplayString(1, encrypted);
 					//LCD_DisplayString(1,"Help me");
+					tmpA = ((~PINA) & 0x04);
+					tmpB = ((~PINA) & 0x08);
 					if(tmpA && !tmpB) {
 						SM2_state = SM2_Choice;
 						break;
 					}
+					
+					else if(!tmpA && tmpB) {
+						newInput = 0;
+						SM2_state = SM2_Display;
+						break;
+					}
+					else {SM2_state = SM2_Encrypt; break;}
 					break;
 				
 				case SM2_Choice:
@@ -321,49 +360,108 @@ int SMTick2 (int SM2_state) {
 // 						PORTB = 0x00;
 // 						state = SM2_Display;
 // 						break;
+						SM2_state = SM2_Deny;
+						break;
 					}
 					else if(tmpA && !tmpB) {
 						LCD_DisplayString(1, "Sent Message");
-						SM2_state = SM2_Accept;
+						
+						SM2_state = SM2_One;
 							//					state = SM2_Choice;
 						break;
 						}
-						SM2_state = SM2_Done;
+						//SM2_state = SM2_Done;
 						break;
 				
 				case SM2_Accept:
 					tmpA = ((~PINA) & 0x04);
-					if(tmpA) {
-						SM2_state = SM2_Accept;
-						break;
-					}
-					else if(!tmpA) {
-						LCD_DisplayString(1,"Send FF");
-						for(int i = 0; i < 2; i++) {
-							PORTB = 0xFF;
-						}
-						PORTB = 0x00;
-						LCD_DisplayString(1,"Send A");
-						for(int i = 0; i < 2; i++) {
-							PORTB = 'A';
-						}
-						
-						//PORTB = 'A';
-						LCD_DisplayString(1,"Send B");
-						for(int i = 0; i < 2; i++) {
-							PORTB = 'B';
-						}
-						PORTB = 0x00;
-						//PORTB = 'B';
-						LCD_DisplayString(1,"Send FF Last");
-						for(int i = 0; i < 2; i++) {
-							PORTB = 0xFF;
-						}
+// 					if(tmpA) {
+// 						SM2_state = SM2_Accept;
+// 						break;
+// 					}
+					//else if(!tmpA) {
+// 						LCD_DisplayString(1,"Send FF");
+// 						for(int i = 0; i < 2; i++) {
+// 							PORTB = 0xFF;
+// 						}
+// 						PORTB = 0x00;
+// 						LCD_DisplayString(1,"Send A");
+// 						for(int i = 0; i < 1; i++) {
+// 							PORTB = 'A';
+// 						}
+// 						
+// 						//PORTB = 'A';
+// 						LCD_DisplayString(1,"Send B");
+// 						for(int i = 0; i < 1; i++) {
+// 							PORTB = 'B';
+// 						}
+// 						PORTB = 0x00;
+// 						LCD_DisplayString(1,"Send B");
+// 						for(int i = 0; i < 1; i++) {
+// 							PORTB = 'B';
+// 						}
+// 						LCD_DisplayString(1,"Send C");
+// 						for(int i = 0; i < 1; i++) {
+// 							PORTB = 'C';
+// 						}
+// 						LCD_DisplayString(1,"Send D");
+// 						for(int i = 0; i < 1; i++) {
+// 							PORTB = 'D';
+// 						}
+// 						PORTB = 0x00;
+// 						//PORTB = 'B';
+// 						LCD_DisplayString(1,"Send FF Last");
+// 						for(int i = 0; i < 2; i++) {
+// 							PORTB = 0xFF;
+// 						}
+						//SM2_state = SM2_One;
 						//SM2_state = SM2_Done;
 						break;
-					}
-					break;
+				//	}
+				//	break;
 				
+				case SM2_One:
+					if(cCount == 0){cCount = 1;SM2_state = SM2_Two; break;}
+					LCD_DisplayString(1,"Send FF");
+					PORTB = 0xFF;
+					cCount--;
+					SM2_state = SM2_One;
+				case SM2_Two:
+					if(cCount == 0){cCount = 1;SM2_state = SM2_Three; break;}
+					LCD_DisplayString(1,"Send A");
+					PORTB = 'A';
+					cCount--;
+					SM2_state = SM2_Two;
+					
+					//SM2_state = SM2_Three;
+					break;
+				case SM2_Three:
+					if(cCount == 0){cCount = 1;SM2_state = SM2_Four; break;}
+					LCD_DisplayString(1,"Send B");
+					PORTB = 'B';
+					cCount--;
+					SM2_state = SM2_Three;
+					//SM2_state = SM2_Four;
+					break;
+				case SM2_Four:
+					if(cCount == 0) {cCount = 1; SM2_state = SM2_Five; break;}
+					LCD_DisplayString(1,"Send C");
+					PORTB = 'C';
+					cCount--;
+					SM2_state = SM2_Four;
+					//SM2_state = SM2_Five;
+					break;
+				case SM2_Five:
+					if(cCount == 0){SM2_state = SM2_Done;break;}
+				
+					LCD_DisplayString(1,"Send FF Last");
+					PORTB = 0xFF;
+					cCount--;
+					SM2_state = SM2_Five;
+					
+					break;
+			
+			
 				case SM2_Deny:
 					LCD_DisplayString(1, "Denied");
 					message[0] = '\0';
