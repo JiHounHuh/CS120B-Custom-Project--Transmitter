@@ -127,7 +127,7 @@ unsigned char GetKeypadKey() {
 enum SM1_States { SM1_Start, SM1_wait, SM1_keypadPress};
 	
 int SMTick1(int state) {
-	unsigned char keypadPress = GetKeypadKey();
+	unsigned char keypadPress = GetKeypadKey(); // get keypad input
 	
 	switch (state) {
 		case SM1_Start:
@@ -135,7 +135,7 @@ int SMTick1(int state) {
 			break;
 		case SM1_wait:
 			if(keypadPress != '\0') {
-				state = SM1_keypadPress;
+				state = SM1_keypadPress; // if invalid, loop
 			}
 			break;
 		
@@ -201,7 +201,7 @@ int SMTick2 (int SM2_state) {
 				
 			case SM2_Display:
 				//state = SM2_Wait;
-				if(column >= 11) SM2_state = SM2_Wait;break;
+				if(column >= 11) SM2_state = SM2_Wait;break; // if over limit, move to next state
 			break;
 			
 			case SM2_Wait:
@@ -210,11 +210,10 @@ int SMTick2 (int SM2_state) {
 			break;
 			
 			case SM2_Encrypt:
-				//SM2_state = SM2_Choice;
 				break;
 			
 			case SM2_Choice:
-				//SM2_state = SM2_Accept;
+
 				break;
 				
 			case SM2_Accept:
@@ -225,7 +224,6 @@ int SMTick2 (int SM2_state) {
 				break;
 				
 			case SM2_One:
-				//SM2_state = SM2_Two;
 				break;
 			
 			case SM2_Two:
@@ -259,13 +257,13 @@ int SMTick2 (int SM2_state) {
 				counter = 0;
 				if(newInput != 0) {
 					column++;
-					if(column < 11) {
+					if(column < 11) { // check column/message length
 						asm("nop");
 						LCD_Cursor(column);
 						if(newInput == 1) {
 							LCD_WriteData(keypadChar);
-							message[count] = keypadChar;
-							count++;
+							message[count] = keypadChar; // save message to encrypt
+							count++; // increment
 						}
 						newInput = 0;
 						asm("nop");
@@ -285,7 +283,7 @@ int SMTick2 (int SM2_state) {
 					tmpB = ((~PINA) & 0x08);
 					
 					//LCD_Cursor(17);
-					const char chatter[] = "s = A, r = B";
+					const char chatter[] = "s = A, r = B"; // option to send or reset
 					//LCD_init;
 					LCD_DisplayString(17,chatter);
 
@@ -299,7 +297,7 @@ int SMTick2 (int SM2_state) {
 					else if(tmpB && !tmpA) {
 						column = 8;
 						count = 0;
-						LCD_DisplayString(1, "Message:");
+						LCD_DisplayString(1, "Message:"); // reset message parameter
 						newInput = 0;
 						SM2_state = SM2_Display;
 						break;
@@ -317,20 +315,12 @@ int SMTick2 (int SM2_state) {
 					tmpB = ((~PINA) & 0x08);
 					
 					
-// 					for(int i = count-1; i >= 0; i--) {
-// 						strcat(encrypted,ersa(message));
-// 					}
-					message[10] = ersa(message);
-					//strcat(encrypted,ersa("ABC"));
-					//strcat(encrypted,message[2]);
+					message[10] = ersa(message); // encrypt into message
+					strcat(encrypted,message); // concat the encryption
 					LCD_DisplayString(1, encrypted);
-// 					char ask[] = " send?YorN";
-// 					strcat(encrypted,ask);
-// 					LCD_DisplayString(1, encrypted);
-					//LCD_DisplayString(1,"Help me");
 					tmpA = ((~PINA) & 0x04);
 					tmpB = ((~PINA) & 0x08);
-					if(tmpA && !tmpB) {
+					if(tmpA && !tmpB) { // check for input to send or reset
 						SM2_state = SM2_Choice;
 						break;
 					}
@@ -348,79 +338,27 @@ int SMTick2 (int SM2_state) {
 					tmpA = ((~PINA) & 0x04);
 					tmpB = ((~PINA) & 0x08);
 					
-					//LCD_DisplayString(1,"Help me");
+
 					if(!tmpA && !tmpB) {
-						//state = SM2_Choice;
+
 						break;
 					}
-					//LCD_DisplayString(1, "Sent");
+
 					else if(!tmpA && tmpB) {
-						
-// 						LCD_DisplayString(1, "Denied");
-// 						message[0] = '\0';
-// 						PORTB = 0x00;
-// 						state = SM2_Display;
-// 						break;
-						SM2_state = SM2_Deny;
+						SM2_state = SM2_Deny; // option 2, deny transmission
 						break;
 					}
 					else if(tmpA && !tmpB) {
 						LCD_DisplayString(1, "Sent Message");
-						
 						SM2_state = SM2_One;
-							//					state = SM2_Choice;
 						break;
 						}
-						//SM2_state = SM2_Done;
 						break;
 				
 				case SM2_Accept:
 					tmpA = ((~PINA) & 0x04);
-// 					if(tmpA) {
-// 						SM2_state = SM2_Accept;
-// 						break;
-// 					}
-					//else if(!tmpA) {
-// 						LCD_DisplayString(1,"Send FF");
-// 						for(int i = 0; i < 2; i++) {
-// 							PORTB = 0xFF;
-// 						}
-// 						PORTB = 0x00;
-// 						LCD_DisplayString(1,"Send A");
-// 						for(int i = 0; i < 1; i++) {
-// 							PORTB = 'A';
-// 						}
-// 						
-// 						//PORTB = 'A';
-// 						LCD_DisplayString(1,"Send B");
-// 						for(int i = 0; i < 1; i++) {
-// 							PORTB = 'B';
-// 						}
-// 						PORTB = 0x00;
-// 						LCD_DisplayString(1,"Send B");
-// 						for(int i = 0; i < 1; i++) {
-// 							PORTB = 'B';
-// 						}
-// 						LCD_DisplayString(1,"Send C");
-// 						for(int i = 0; i < 1; i++) {
-// 							PORTB = 'C';
-// 						}
-// 						LCD_DisplayString(1,"Send D");
-// 						for(int i = 0; i < 1; i++) {
-// 							PORTB = 'D';
-// 						}
-// 						PORTB = 0x00;
-// 						//PORTB = 'B';
-// 						LCD_DisplayString(1,"Send FF Last");
-// 						for(int i = 0; i < 2; i++) {
-// 							PORTB = 0xFF;
-// 						}
-						//SM2_state = SM2_One;
-						//SM2_state = SM2_Done;
-						break;
-				//	}
-				//	break;
-				
+						break;		
+// ======================= Test Signal ==================
 				case SM2_One:
 					if(cCount == 0){cCount = 1;SM2_state = SM2_Two; break;}
 					LCD_DisplayString(1,"Send FF");
@@ -462,7 +400,7 @@ int SMTick2 (int SM2_state) {
 					
 					break;
 			
-			
+// ========================== End of Test Signal
 				case SM2_Deny:
 					LCD_DisplayString(1, "Denied");
 					message[0] = '\0';
@@ -514,7 +452,7 @@ int SMTick3(int SM3_state) {
 		case SM3_Begin:
 			LCD_DisplayString(1,"Hello");
 			if(bCount != 0) {
-				LCD_DisplayString(1,"Begin of Message");
+				LCD_DisplayString(1,"Begin of Message"); // begin of message
 				PORTB = 0xFF;
 				SM3_state = SM3_Begin;
 				bCount--;
@@ -522,15 +460,16 @@ int SMTick3(int SM3_state) {
 			}
 		case SM3_Message:
 			
-			LCD_DisplayString(1,"Send 3");
-			PORTB = 0x03;
-			LCD_DisplayString(1,"Send 8");
-			PORTB = 0x08;
+			if(count >= 0) {
+				PORTB = message[count];
+				count--;
+				SM3_state = SM3_Message; //send each char individually
+			}
 			break;
 		
 		case SM3_End:
 			for(int i = 0; i < 2;i++){
-				LCD_DisplayString(1, "Final Message");
+				LCD_DisplayString(1, "Final Message"); // end of message
 				PORTB = 0xFF;
 			}
 			PORTB = 0x00;
