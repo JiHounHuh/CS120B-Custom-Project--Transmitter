@@ -300,6 +300,7 @@ int SMTick2 (int SM2_state) {
 						column = 8;
 						count = 0;
 						LCD_DisplayString(1, "Message:");
+						newInput = 0;
 						SM2_state = SM2_Display;
 						break;
 					}
@@ -472,6 +473,7 @@ int SMTick2 (int SM2_state) {
 					
 				case SM2_Done:
 					LCD_DisplayString(1,"All Done");
+					SM2_state = SM2_Display;
 					break;
 					
 				default:
